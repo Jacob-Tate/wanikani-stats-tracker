@@ -1,0 +1,165 @@
+// src/hooks/use-sync.ts
+import { useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSyncStore } from '@/stores/sync-store'
+import { useUserStore } from '@/stores/user-store'
+import { performSync, forceFullSync, getLastSyncInfo } from '@/lib/sync/sync-manager'
+import { queryKeys } from '@/lib/api/queries'
+import { clearAllBrowserCaches } from '@/lib/cache/cache-manager'
+
+export function useSync() {
+  const queryClient = useQueryClient()
+  const token = useUserStore((state) => state.token)
+  const { isSyncing, lastSyncAt, lastSyncResult, progress, error, setSyncing, setProgress, setLastSync, setError } =
+    useSyncStore()
+
+  const sync = useCallback(
+    async (force = false) => {
+      console.log('[USE-SYNC] sync() called - force:', force, 'token:', token ? 'present' : 'missing', 'isSyncing:', isSyncing)
+
+      if (!token) {
+        const errorMessage = 'No API token available'
+        console.error('[USE-SYNC] No token available')
+        setError(errorMessage)
+        throw new Error(errorMessage)
+      }
+
+      if (isSyncing) {
+        console.log('[USE-SYNC] Already syncing, returning early')
+        return
+      }
+
+      console.log('[USE-SYNC] Starting sync...')
+      setSyncing(true)
+      setError(null)
+
+      try {
+        const syncFn = force ? forceFullSync : performSync
+        console.log('[USE-SYNC] Calling', force ? 'forceFullSync' : 'performSync')
+        const result = await syncFn(token, setProgress)
+        console.log('[USE-SYNC] Sync result:', result)
+
+        setLastSync(result)
+
+        // If sync failed, set the error
+        if (!result.success && result.error) {
+          setError(result.error)
+        }
+
+        // Clear React Query cache completely to ensure fresh data
+        // Using removeQueries instead of invalidateQueries for aggressive cache clearing
+        if (result.success) {
+          console.log('[USE-SYNC] Clearing React Query cache...')
+          await queryClient.removeQueries({ queryKey: queryKeys.subjects })
+          await queryClient.removeQueries({ queryKey: queryKeys.assignments })
+          await queryClient.removeQueries({ queryKey: queryKeys.reviewStatistics })
+          await queryClient.removeQueries({ queryKey: queryKeys.levelProgressions })
+
+          // Force immediate refetch for active queries
+          await queryClient.refetchQueries({ queryKey: queryKeys.subjects, type: 'active' })
+          await queryClient.refetchQueries({ queryKey: queryKeys.assignments, type: 'active' })
+          await queryClient.refetchQueries({ queryKey: queryKeys.reviewStatistics, type: 'active' })
+          await queryClient.refetchQueries({ queryKey: queryKeys.levelProgressions, type: 'active' })
+
+          console.log('[USE-SYNC] Cache cleared and queries refetched')
+        }
+
+        return result
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Sync failed'
+        setError(errorMessage)
+        throw err
+      } finally {
+        setSyncing(false)
+        setProgress(null)
+      }
+    },
+    [token, isSyncing, queryClient, setSyncing, setProgress, setLastSync, setError]
+  )
+
+  const checkSyncStatus = useCallback(async () => {
+    return getLastSyncInfo()
+  }, [])
+
+  /**
+   * Nuclear option: Clear ALL caches and force full resync
+   * This clears:
+   * - Service Worker caches
+   * - LocalStorage (except auth)
+   * - React Query cache
+   * - IndexedDB
+   */
+  const forceClearAndSync = useCallback(
+    async () => {
+      console.log('[USE-SYNC] forceClearAndSync() called - nuclear cache clear')
+
+      if (!token) {
+        const errorMessage = 'No API token available'
+        console.error('[USE-SYNC] No token available')
+        setError(errorMessage)
+        throw new Error(errorMessage)
+      }
+
+      if (isSyncing) {
+        console.log('[USE-SYNC] Already syncing, returning early')
+        return
+      }
+
+      console.log('[USE-SYNC] Starting nuclear cache clear...')
+      setSyncing(true)
+      setError(null)
+      setProgress({ phase: 'idle', message: 'Clearing all caches...', isFullSync: true })
+
+      try {
+        // Clear all browser caches (Service Worker + LocalStorage)
+        await clearAllBrowserCaches()
+        console.log('[USE-SYNC] Browser caches cleared')
+
+        // Clear React Query cache completely
+        queryClient.clear()
+        console.log('[USE-SYNC] React Query cache cleared')
+
+        // Now perform force full sync (which clears IndexedDB)
+        console.log('[USE-SYNC] Starting force full sync...')
+        const result = await forceFullSync(token, setProgress)
+        console.log('[USE-SYNC] Force full sync result:', result)
+
+        setLastSync(result)
+
+        if (!result.success && result.error) {
+          setError(result.error)
+        }
+
+        // Refetch active queries after sync
+        if (result.success) {
+          console.log('[USE-SYNC] Refetching active queries...')
+          await queryClient.refetchQueries({ type: 'active' })
+          console.log('[USE-SYNC] All active queries refetched')
+        }
+
+        return result
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Nuclear sync failed'
+        console.error('[USE-SYNC] Nuclear sync error:', err)
+        setError(errorMessage)
+        throw err
+      } finally {
+        setSyncing(false)
+        setProgress(null)
+      }
+    },
+    [token, isSyncing, queryClient, setSyncing, setProgress, setLastSync, setError]
+  )
+
+  return {
+    sync,
+    forceSync: () => sync(true),
+    forceClearAndSync,
+    checkSyncStatus,
+    isSyncing,
+    lastSyncAt,
+    lastSyncResult,
+    progress,
+    error,
+  }
+}
