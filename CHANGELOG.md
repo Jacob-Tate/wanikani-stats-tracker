@@ -5,6 +5,30 @@ All notable changes to WaniTrack will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.3] - 2025-12-20
+
+### Fixed
+- **Progress Page: Level Achievement Dates for Reset Levels**: Fixed missing completion dates for level milestones (10, 20, 30, 40, 50, 60) when users reset mid-level
+  - Applied same sorting pattern from dashboard level progress component
+  - Now prioritizes completed level progressions (those with `passed_at`) over abandoned ones
+  - Falls back to most recent `created_at` for tie-breaking
+  - Ensures accurate achievement dates display in milestone timeline
+- **Progress Page: Achievement Tooltip Readability**: Fixed poor contrast for date text in achievement tooltips
+  - Date text now properly inverts contrast to match tooltip background
+  - Light mode: lighter text (`text-paper-300`) on dark tooltip background
+  - Dark mode: darker text (`text-ink-400`) on light tooltip background
+  - Applied to both completion dates and progress indicators
+- **Progress Page: Missing 5000 Guru Achievement**: Added missing milestone badge for reaching Guru on 5000 items
+  - Guru milestones now include: 1, 100, 500, 1000, 2500, **5000**, All Guru
+  - Matches the existing Burns milestone structure for consistency
+
+### Technical
+- Updated `src/lib/calculations/milestones.ts`:
+  - Modified `getLevelMilestones()` to filter and sort progressions by `passed_at` presence (lines 170-179)
+  - Added `5000` to Guru targets array (line 135)
+- Updated `src/components/progress/milestone-timeline.tsx`:
+  - Changed tooltip date text from `text-ink-400 dark:text-paper-300` to `text-paper-300 dark:text-ink-400` (lines 70, 75)
+
 ## [2.11.2] - 2025-12-20
 
 ### Fixed

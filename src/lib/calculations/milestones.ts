@@ -132,7 +132,7 @@ function getGuruMilestones(
   const currentPassed = passed.length
   const totalAvailable = subjects.filter((s) => !s.hidden_at).length
 
-  const targets = [1, 100, 500, 1000, 2500, totalAvailable]
+  const targets = [1, 100, 500, 1000, 2500, 5000, totalAvailable]
 
   return targets.map((target) => {
     const isAchieved = currentPassed >= target
@@ -167,7 +167,16 @@ function getLevelMilestones(
   const targets = [10, 20, 30, 40, 50, 60]
 
   return targets.map((target) => {
-    const progression = levelProgressions.find((p) => p.level === target)
+    // For reset levels, prefer the progression with passed_at (completed) over abandoned ones
+    const progression = levelProgressions
+      .filter((p) => p.level === target)
+      .sort((a, b) => {
+        // Prioritize passed levels
+        if (a.passed_at && !b.passed_at) return -1
+        if (!a.passed_at && b.passed_at) return 1
+        // Otherwise use most recent created_at
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })[0]
     const isAchieved = currentLevel > target
     const achievedAt = progression?.passed_at ? new Date(progression.passed_at) : null
 
