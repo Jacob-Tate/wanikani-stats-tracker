@@ -5,6 +5,48 @@ All notable changes to WaniTrack will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2025-12-20
+
+### Added
+- **Forecast Page: Level Progression Forecast**: New feature showing projected level advancement based on lesson pace
+  - Visual milestone card displaying current level → projected level
+  - Accounts for user's current progress within their level
+  - Shows levels gained and lessons completed during forecast period
+  - Configurable via Settings: include vocabulary or radicals/kanji only
+  - Celebration message when forecast predicts WaniKani completion
+  - New setting: "Include vocabulary in level progression" (Settings → Forecast)
+- **Forecast Page: Weekly View as Default**: Changed default chart view from daily to weekly for better overview
+
+### Fixed
+- **Forecast Page: Mobile UX Improvements**
+  - Daily/Weekly toggle now full-width on mobile with equal button sizing
+  - Weekly bars use stacked layout on mobile (week label above, bar fills width, stats below)
+  - Daily view labels narrower on mobile (`w-16` instead of `w-20`) for better bar visibility
+- **Forecast Page: Peak Day/Week Color Consistency**: Peak bars now use red + muted red instead of confusing red + green mix
+  - Peak bars: vermillion-500 (existing items) + vermillion-300/600 (new lessons)
+  - Normal bars: patina-500/400 (existing items) + patina-300/600 (new lessons)
+- **Forecast Page: New Lessons Bar Color**: Changed from off-brand blue to muted green (patina-300/600) for consistency
+- **Forecast Page: Tooltip Clipping**: Fixed bar chart tooltips getting cut off by container overflow
+- **Forecast Page: Tooltip Flash**: Fixed tooltips "changing their mind" by hiding until position calculated
+- **Forecast Page: Peak Day Background**: Removed translucent red background that looked awkward
+
+### Improved
+- **Forecast Page: User-Friendly Tooltips**: Simplified all tooltip language to avoid technical jargon
+  - Removed references to SRS stages, variance calculations, and technical terms
+  - Used everyday language for better accessibility
+- **Forecast Page: Accuracy Disclaimer**: Added prominent notice explaining forecasts are estimates based on average accuracy
+
+### Technical
+- New files:
+  - `src/lib/calculations/level-progression-forecast.ts` - Level progression calculation logic
+  - `src/components/forecast/level-progression-card.tsx` - Milestone card component
+- Updated `src/stores/settings-store.ts`: Added `forecastIncludeVocabulary` setting
+- Updated `src/pages/settings.tsx`: Added "Forecast" section with vocabulary toggle
+- Updated `src/pages/forecast.tsx`: Integrated level progression card with subjects/user data
+- Updated `src/components/forecast/workload-chart.tsx`: Mobile responsive improvements, color fixes
+- Updated `src/components/shared/info-tooltip.tsx`: Viewport boundary detection logic
+- Updated workload forecast: Lessons now start from tomorrow instead of today
+
 ## [2.11.3] - 2025-12-20
 
 ### Fixed
