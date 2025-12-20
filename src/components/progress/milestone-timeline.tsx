@@ -67,12 +67,12 @@ function MilestoneBadge({ milestone, isAchieved }: MilestoneBadgeProps) {
         <div className="bg-ink-100 dark:bg-paper-100 text-paper-100 dark:text-ink-100 text-xs px-3 py-2 rounded whitespace-nowrap shadow-lg">
           {milestone.description}
           {isAchieved && milestone.achievedAt && (
-            <div className="text-ink-400 dark:text-paper-300 mt-1">
+            <div className="text-paper-300 dark:text-ink-400 mt-1">
               {format(milestone.achievedAt, 'MMM d, yyyy')}
             </div>
           )}
           {!isAchieved && (
-            <div className="text-ink-400 dark:text-paper-300 mt-1">
+            <div className="text-paper-300 dark:text-ink-400 mt-1">
               {milestone.current.toLocaleString()} / {milestone.target.toLocaleString()}
             </div>
           )}
