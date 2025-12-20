@@ -17,6 +17,7 @@ interface SettingsState {
   showHiddenItems: boolean // default: false - show items removed from curriculum
   levelHistoryMode: 'bar-chart' | 'cards' | 'compact-list' // default: 'bar-chart'
   includeBurnedLeeches: boolean // default: false - exclude burned items from leeches
+  forecastIncludeVocabulary: boolean // default: true - include vocabulary in level progression forecast
 
   // Actions
   setTheme: (theme: 'light' | 'dark') => void
@@ -31,6 +32,7 @@ interface SettingsState {
   setShowHiddenItems: (value: boolean) => void
   setLevelHistoryMode: (mode: 'bar-chart' | 'cards' | 'compact-list') => void
   setIncludeBurnedLeeches: (value: boolean) => void
+  setForecastIncludeVocabulary: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -49,6 +51,7 @@ export const useSettingsStore = create<SettingsState>()(
       showHiddenItems: false, // default to hiding curriculum-removed items
       levelHistoryMode: 'bar-chart', // default to bar chart view
       includeBurnedLeeches: false, // default to excluding burned items from leeches
+      forecastIncludeVocabulary: true, // default to including vocabulary
 
       // Actions
       setTheme: (theme: 'light' | 'dark') => {
@@ -107,6 +110,10 @@ export const useSettingsStore = create<SettingsState>()(
 
       setIncludeBurnedLeeches: (value: boolean) => {
         set({ includeBurnedLeeches: value })
+      },
+
+      setForecastIncludeVocabulary: (value: boolean) => {
+        set({ forecastIncludeVocabulary: value })
       },
     }),
     {

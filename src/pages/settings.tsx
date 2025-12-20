@@ -30,7 +30,9 @@ export function Settings() {
     levelHistoryMode,
     setLevelHistoryMode,
     includeBurnedLeeches,
-    setIncludeBurnedLeeches
+    setIncludeBurnedLeeches,
+    forecastIncludeVocabulary,
+    setForecastIncludeVocabulary
   } = useSettingsStore()
   const { confirm, ConfirmDialog } = useConfirm()
 
@@ -265,6 +267,37 @@ export function Settings() {
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-paper-100 dark:bg-ink-100 transition-transform ${
                   includeBurnedLeeches ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Forecast Settings */}
+      <div className="bg-paper-200 dark:bg-ink-200 rounded-lg border border-paper-300 dark:border-ink-300 p-6 shadow-sm">
+        <h2 className="text-lg font-display font-semibold text-ink-100 dark:text-paper-100 mb-4">
+          Forecast
+        </h2>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-ink-100 dark:text-paper-100">
+                Include vocabulary in level progression
+              </label>
+              <InfoTooltip content="Controls whether vocabulary lessons are counted in level progression forecasts. When disabled, only radicals and kanji are counted. This reflects the WaniKani rule that you only need 90% of kanji at Guru to level up - vocabulary is optional for level progression (though still valuable for learning)." />
+            </div>
+            <button
+              onClick={() => setForecastIncludeVocabulary(!forecastIncludeVocabulary)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                forecastIncludeVocabulary
+                  ? 'bg-vermillion-500'
+                  : 'bg-paper-300 dark:bg-ink-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-paper-100 dark:bg-ink-100 transition-transform ${
+                  forecastIncludeVocabulary ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>

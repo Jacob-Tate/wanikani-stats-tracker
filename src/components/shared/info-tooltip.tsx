@@ -6,10 +6,57 @@ interface InfoTooltipProps {
   className?: string
 }
 
+interface Position {
+  x: number
+  y: number
+  direction: 'up' | 'down'
+}
+
 export function InfoTooltip({ content, className = '' }: InfoTooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const [position, setPosition] = useState<Position>({ x: 0, y: 0, direction: 'up' })
+  const [isPositioned, setIsPositioned] = useState(false)
+
+  // Calculate position to keep tooltip within viewport
+  useEffect(() => {
+    if (!isVisible || !tooltipRef.current || !buttonRef.current) {
+      setIsPositioned(false)
+      return
+    }
+
+    const tooltip = tooltipRef.current
+    const button = buttonRef.current
+    const buttonRect = button.getBoundingClientRect()
+    const tooltipRect = tooltip.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const padding = 16
+
+    // Calculate centered X position
+    let x = buttonRect.left + buttonRect.width / 2 - tooltipRect.width / 2
+
+    // Clamp to viewport bounds
+    if (x + tooltipRect.width > viewportWidth - padding) {
+      x = viewportWidth - tooltipRect.width - padding
+    }
+    if (x < padding) {
+      x = padding
+    }
+
+    // Determine vertical position (prefer above, flip to below if no room)
+    let direction: 'up' | 'down' = 'up'
+    let y = buttonRect.top - tooltipRect.height - 8
+
+    if (y < padding) {
+      direction = 'down'
+      y = buttonRect.bottom + 8
+    }
+
+    setPosition({ x, y, direction })
+    setIsPositioned(true)
+  }, [isVisible])
 
   // Close tooltip when clicking outside
   useEffect(() => {
@@ -49,12 +96,17 @@ export function InfoTooltip({ content, className = '' }: InfoTooltipProps) {
       {isVisible && (
         <div
           ref={tooltipRef}
-          className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-ink-100 dark:bg-paper-100 text-paper-100 dark:text-ink-100 text-xs rounded-lg shadow-lg border border-ink-200 dark:border-paper-200"
+          className={`fixed z-50 w-64 p-3 bg-ink-100 dark:bg-paper-100 text-paper-100 dark:text-ink-100 text-xs rounded-lg shadow-lg border border-ink-200 dark:border-paper-200 transition-opacity duration-200 ${isPositioned ? 'opacity-100' : 'opacity-0'}`}
+          style={{ left: `${position.x}px`, top: `${position.y}px` }}
           role="tooltip"
         >
           {content}
-          {/* Arrow pointing down */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-ink-100 dark:border-t-paper-100" />
+          {/* Arrow pointing to trigger button */}
+          {position.direction === 'up' ? (
+            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-ink-100 dark:border-t-paper-100" />
+          ) : (
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-ink-100 dark:border-b-paper-100" />
+          )}
         </div>
       )}
     </div>
