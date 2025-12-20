@@ -31,7 +31,7 @@ export function JLPTThresholdSelect() {
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
 
           {/* Dropdown */}
-          <div className="absolute right-0 top-full mt-2 w-72 bg-paper-200 dark:bg-ink-200 border border-paper-300 dark:border-ink-300 rounded-lg shadow-lg z-20 overflow-hidden">
+          <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] sm:max-w-none bg-paper-200 dark:bg-ink-200 border border-paper-300 dark:border-ink-300 rounded-lg shadow-lg z-20 overflow-hidden">
             {thresholds.map((threshold) => (
               <button
                 key={threshold}

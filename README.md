@@ -8,7 +8,7 @@ A comprehensive analytics platform for WaniKani learners. Track your progress, i
 
 ## Features
 
-### 📊 Dashboard
+### Dashboard
 Real-time overview of your WaniKani journey:
 - Current level, available reviews/lessons, next review time
 - SRS distribution chart showing items across all stages (Apprentice → Burned)
@@ -16,14 +16,14 @@ Real-time overview of your WaniKani journey:
 - Review forecast for upcoming hours and days
 - Navigate through historical level data
 
-### 📈 Progress Tracking
+### Progress Tracking
 Long-term analysis and projections:
 - **Level Timeline**: Visual history of all completed levels with customizable display modes (bar chart, cards, compact list)
 - **Level 60 Projections**: Multiple scenarios based on your actual pace (expected, active, fast track, conservative)
 - **Intelligent Break Detection**: Automatically identifies inactive periods for more accurate projections
 - **Assignments Table**: Comprehensive searchable list with filtering by type and SRS stage
 
-### 🐛 Leech Detection
+### Leech Detection
 Identify and tackle your problem items:
 - Automatic detection of items with low accuracy (<75%) and high review counts (10+)
 - Severity ranking system accounting for accuracy, incorrect count, and review volume
@@ -33,28 +33,28 @@ Identify and tackle your problem items:
 - **CSV Export**: Export leech data with readings for external analysis
 - **Burned Leeches Setting**: Control whether burned items appear in your leeches list
 
-### 📖 Kanji Grid
+### Kanji Grid
 Browse and analyze your kanji collection:
 - Grid view of all kanji with SRS stage colors
 - Filter by type, SRS stage, and search by character or meaning
 - View removed curriculum items (optional)
 - Interactive tooltips with detailed information
 
-### 🎯 Readiness Tools
+### Readiness Tools
 Prepare for JLPT exams:
 - Grade-based readiness assessment (N5-N1)
 - Configurable SRS thresholds (Apprentice, Guru, Master, Enlightened)
 - Track mastery progress for each JLPT level
 - Detailed breakdown by kanji, vocabulary, and overall readiness
 
-### 🎨 Accuracy Insights
+### Accuracy Insights
 Understand your performance patterns:
 - Accuracy distribution across all items
 - Time-based accuracy heatmap by level
 - Type breakdown (radicals, kanji, vocabulary)
 - Recent items performance tracking
 
-### ⚙️ Settings & Data Management
+### Settings & Data Management
 Full control over your data and preferences:
 - **Data Export**: Export complete WaniKani data as JSON or leeches as CSV
 - **Sync Management**: Force full sync, view last sync status
@@ -203,8 +203,6 @@ If you encounter issues:
 ## Version History
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes and version history.
-
-**Current Version:** 2.11.1
 
 ---
 

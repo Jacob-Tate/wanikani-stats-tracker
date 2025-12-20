@@ -5,6 +5,37 @@ All notable changes to WaniTrack will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.2] - 2025-12-20
+
+### Fixed
+- **Readiness Page: Dropdown Positioning**: Fixed mastery level dropdown extending off-screen on mobile
+  - Dropdown now anchors to left on mobile (right on desktop)
+  - Added max-width constraint to prevent overflow on narrow screens
+  - Applied responsive positioning classes for improved mobile UX
+- **Progress Page: Milestone Date Format**: Clarified ambiguous date display on journey timeline
+  - Changed format from `MMM yy` (e.g., "Dec 25") to `MMM yyyy` (e.g., "Dec 2025")
+  - Prevents confusion between abbreviated year and day of month
+  - Applied to both mobile and desktop milestone displays
+- **Dashboard: Level Progress Percentage Alignment**: Fixed percentage alignment on mobile layout
+  - Percentage values now properly align to the right on mobile
+  - Stats container uses `self-end` on mobile for correct positioning
+  - Desktop layout unchanged
+- **Leeches Page: Modal Height on Mobile**: Fixed detail modal extending beyond viewport
+  - Added `max-h-[calc(100vh-2rem)]` constraint to prevent overflow
+  - Enabled internal scrolling with `overflow-y-auto`
+  - Close button and all content now accessible on all screen sizes
+
+### Technical
+- Updated `src/components/jlpt/jlpt-threshold-select.tsx`:
+  - Changed dropdown positioning from `right-0` to `left-0 sm:left-auto sm:right-0`
+  - Added `max-w-[calc(100vw-2rem)] sm:max-w-none` to dropdown container
+- Updated `src/components/progress/level-60-projection.tsx`:
+  - Changed date format from `'MMM yy'` to `'MMM yyyy'` (2 instances at lines 399, 452)
+- Updated `src/components/dashboard/level-progress.tsx`:
+  - Added `self-end sm:self-auto` to stats container for right-alignment on mobile
+- Updated `src/components/shared/modal.tsx`:
+  - Added `flex flex-col max-h-[calc(100vh-2rem)] overflow-y-auto` to modal container
+
 ## [2.11.1] - 2025-12-20
 
 ### Fixed
