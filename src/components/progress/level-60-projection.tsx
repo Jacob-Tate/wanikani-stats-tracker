@@ -396,7 +396,7 @@ export function Level60Projection() {
                         'text-xs mt-1 whitespace-nowrap',
                         isCompleted ? 'text-patina-500 dark:text-patina-400' : 'text-ink-400 dark:text-paper-300'
                       )}>
-                        {format(milestone.date, 'MMM yy')}
+                        {format(milestone.date, 'MMM yyyy')}
                       </div>
                     </div>
                   </div>
@@ -449,7 +449,7 @@ export function Level60Projection() {
                         'text-xs mt-1 whitespace-nowrap',
                         isCompleted ? 'text-patina-500 dark:text-patina-400' : 'text-ink-400 dark:text-paper-300'
                       )}>
-                        {format(milestone.date, 'MMM yy')}
+                        {format(milestone.date, 'MMM yyyy')}
                       </div>
                       {milestone.level === 60 && (
                         <div className="text-xs text-ink-400 dark:text-paper-300 mt-1 font-medium">

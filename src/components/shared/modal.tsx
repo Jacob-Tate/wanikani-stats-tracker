@@ -83,6 +83,7 @@ export function Modal({ isOpen, onClose, children, size = 'md', className }: Mod
           className={cn(
             'pointer-events-auto w-full bg-paper-200 dark:bg-ink-200 rounded-lg border border-paper-300 dark:border-ink-300 shadow-xl',
             'transform transition-all duration-300',
+            'flex flex-col max-h-[calc(100vh-2rem)] overflow-y-auto',
             isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
             sizeClasses[size],
             className
