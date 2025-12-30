@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { useReviewStatistics } from '@/lib/api/queries'
 import { useSyncStore } from '@/stores/sync-store'
+import { AccuracyItemsModal } from './accuracy-items-modal'
+import type { ReviewStatistic } from '@/lib/api/types'
 
 interface DistributionBucket {
   label: string
@@ -8,18 +11,22 @@ interface DistributionBucket {
   percentage: number
   color: string
   bgColor: string
+  minAccuracy: number
+  maxAccuracy: number
 }
 
 export function AccuracyDistribution() {
   const { data: reviewStats, isLoading } = useReviewStatistics()
   const isSyncing = useSyncStore((state) => state.isSyncing)
+  const [selectedBucket, setSelectedBucket] = useState<DistributionBucket | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Calculate distribution buckets
   const buckets: DistributionBucket[] = [
-    { label: 'Excellent', range: '90-100%', count: 0, percentage: 0, color: 'text-patina-500', bgColor: 'bg-patina-500' },
-    { label: 'Good', range: '75-89%', count: 0, percentage: 0, color: 'text-ink-100', bgColor: 'bg-ink-400' },
-    { label: 'Fair', range: '60-74%', count: 0, percentage: 0, color: 'text-ochre', bgColor: 'bg-ochre' },
-    { label: 'Poor', range: '0-59%', count: 0, percentage: 0, color: 'text-vermillion-500', bgColor: 'bg-vermillion-500' },
+    { label: 'Excellent', range: '90-100%', count: 0, percentage: 0, color: 'text-patina-500', bgColor: 'bg-patina-500', minAccuracy: 90, maxAccuracy: 100 },
+    { label: 'Good', range: '75-89%', count: 0, percentage: 0, color: 'text-ink-100', bgColor: 'bg-ink-400', minAccuracy: 75, maxAccuracy: 89 },
+    { label: 'Fair', range: '60-74%', count: 0, percentage: 0, color: 'text-ochre', bgColor: 'bg-ochre', minAccuracy: 60, maxAccuracy: 74 },
+    { label: 'Poor', range: '0-59%', count: 0, percentage: 0, color: 'text-vermillion-500', bgColor: 'bg-vermillion-500', minAccuracy: 0, maxAccuracy: 59 },
   ]
 
   if (reviewStats) {
@@ -52,6 +59,23 @@ export function AccuracyDistribution() {
 
   const maxCount = Math.max(...buckets.map((b) => b.count), 1)
   const totalItems = buckets.reduce((sum, b) => sum + b.count, 0)
+
+  // Get items for a specific bucket
+  const getItemsForBucket = (bucket: DistributionBucket): ReviewStatistic[] => {
+    if (!reviewStats) return []
+
+    return reviewStats.filter((stat) => {
+      if (stat.hidden) return false
+      const accuracy = stat.percentage_correct
+      return accuracy >= bucket.minAccuracy && accuracy <= bucket.maxAccuracy
+    })
+  }
+
+  const handleBucketClick = (bucket: DistributionBucket) => {
+    if (bucket.count === 0) return // Don't open modal for empty buckets
+    setSelectedBucket(bucket)
+    setIsModalOpen(true)
+  }
 
   if (isLoading || isSyncing) {
     return (
@@ -100,7 +124,12 @@ export function AccuracyDistribution() {
 
       <div className="space-y-4">
         {buckets.map((bucket) => (
-          <div key={bucket.label}>
+          <button
+            key={bucket.label}
+            onClick={() => handleBucketClick(bucket)}
+            disabled={bucket.count === 0}
+            className="w-full text-left transition-smooth hover:bg-paper-300/30 dark:hover:bg-ink-300/30 rounded-lg p-2 -m-2 disabled:cursor-default disabled:hover:bg-transparent"
+          >
             <div className="flex items-center justify-between mb-2 text-sm">
               <div className="flex items-center gap-2">
                 <span className={`font-medium ${bucket.color} dark:${bucket.color}`}>
@@ -125,7 +154,7 @@ export function AccuracyDistribution() {
                 style={{ width: `${(bucket.count / maxCount) * 100}%` }}
               />
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -134,6 +163,17 @@ export function AccuracyDistribution() {
           {totalItems.toLocaleString()} items tracked
         </div>
       </div>
+
+      {/* Modal for showing items in selected bucket */}
+      {selectedBucket && (
+        <AccuracyItemsModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          bucketLabel={selectedBucket.label}
+          bucketRange={selectedBucket.range}
+          items={getItemsForBucket(selectedBucket)}
+        />
+      )}
     </div>
   )
 }
