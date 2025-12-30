@@ -1,6 +1,6 @@
 // src/lib/db/schema.ts
 export const DB_NAME = 'wanitrack'
-export const DB_VERSION = 1
+export const DB_VERSION = 2
 
 export interface SyncMetadata {
   id: string // 'sync_metadata' - singleton
@@ -8,6 +8,7 @@ export interface SyncMetadata {
   assignmentsUpdatedAt: string | null
   reviewStatisticsUpdatedAt: string | null
   levelProgressionsUpdatedAt: string | null
+  resetsUpdatedAt: string | null
   lastFullSync: string | null
 }
 
@@ -38,10 +39,17 @@ export interface CachedLevelProgression {
   updatedAt: string
 }
 
+export interface CachedReset {
+  id: number
+  data: any
+  updatedAt: string
+}
+
 export const STORES = {
   SYNC_METADATA: 'sync_metadata',
   SUBJECTS: 'subjects',
   ASSIGNMENTS: 'assignments',
   REVIEW_STATISTICS: 'review_statistics',
   LEVEL_PROGRESSIONS: 'level_progressions',
+  RESETS: 'resets',
 } as const

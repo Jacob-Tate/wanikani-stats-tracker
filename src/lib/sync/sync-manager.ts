@@ -3,11 +3,12 @@ import { syncSubjects } from '@/lib/db/repositories/subjects'
 import { syncAssignments } from '@/lib/db/repositories/assignments'
 import { syncReviewStatistics } from '@/lib/db/repositories/review-statistics'
 import { syncLevelProgressions } from '@/lib/db/repositories/level-progressions'
+import { syncResets } from '@/lib/db/repositories/resets'
 import { updateSyncMetadata, getSyncMetadata } from '@/lib/db/sync-metadata'
 import { clearDatabase } from '@/lib/db/database'
 
 export interface SyncProgress {
-  phase: 'idle' | 'subjects' | 'assignments' | 'reviewStats' | 'levelProgressions' | 'complete' | 'error'
+  phase: 'idle' | 'subjects' | 'assignments' | 'reviewStats' | 'levelProgressions' | 'resets' | 'complete' | 'error'
   message: string
   isFullSync: boolean
 }
@@ -18,6 +19,7 @@ export interface SyncResult {
   assignments: number
   reviewStatistics: number
   levelProgressions: number
+  resets: number
   isFullSync: boolean
   error?: string
 }
@@ -39,6 +41,7 @@ export async function performSync(
     assignments: 0,
     reviewStatistics: 0,
     levelProgressions: 0,
+    resets: 0,
     isFullSync: false,
   }
 
@@ -72,6 +75,13 @@ export async function performSync(
       onProgress?.({ phase: 'levelProgressions', message: msg, isFullSync: result.isFullSync })
     )
     result.levelProgressions = progressionsResult.updated
+
+    // Sync resets
+    onProgress?.({ phase: 'resets', message: 'Syncing resets...', isFullSync: result.isFullSync })
+    const resetsResult = await syncResets(token, (msg) =>
+      onProgress?.({ phase: 'resets', message: msg, isFullSync: result.isFullSync })
+    )
+    result.resets = resetsResult.updated
 
     // Update last full sync time
     await updateSyncMetadata({

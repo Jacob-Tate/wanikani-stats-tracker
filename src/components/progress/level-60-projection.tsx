@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { format, formatDistanceToNow, addDays } from 'date-fns'
-import { Rocket, TrendingUp, Turtle } from 'lucide-react'
+import { format, formatDistanceToNow, addDays, differenceInDays } from 'date-fns'
+import { Rocket, TrendingUp, Turtle, Flag, Target } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import { useUser, useLevelProgressions } from '@/lib/api/queries'
+import { useUser, useLevelProgressions, useResets } from '@/lib/api/queries'
 import { projectLevel60Date } from '@/lib/calculations/forecasting'
 import { useSyncStore } from '@/stores/sync-store'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -20,15 +20,17 @@ interface Scenario {
 export function Level60Projection() {
   const { data: user, isLoading: userLoading } = useUser()
   const { data: levelProgressions, isLoading: progressionsLoading } = useLevelProgressions()
+  const { data: resets, isLoading: resetsLoading } = useResets()
   const [showExcludedLevels, setShowExcludedLevels] = useState(false)
-  const [selectedScenario, setSelectedScenario] = useState<'fast' | 'expected' | 'conservative'>('expected')
+  const [selectedScenario, setSelectedScenario] = useState<'fast' | 'expected' | 'conservative' | 'custom'>('expected')
+  const [customLevel, setCustomLevel] = useState<number>(user?.level ? user.level + 1 : 2)
   const isSyncing = useSyncStore((state) => state.isSyncing)
   const useActiveAverage = useSettingsStore((state) => state.useActiveAverage)
   const averagingMethod = useSettingsStore((state) => state.averagingMethod)
   const useCustomThreshold = useSettingsStore((state) => state.useCustomThreshold)
   const customThresholdDays = useSettingsStore((state) => state.customThresholdDays)
 
-  const isLoading = userLoading || progressionsLoading || isSyncing
+  const isLoading = userLoading || progressionsLoading || resetsLoading || isSyncing
 
   // Calculate projection with selected averaging method and threshold settings
   const projection = user && levelProgressions
@@ -41,13 +43,37 @@ export function Level60Projection() {
       )
     : null
 
+  // Calculate days into current level
+  const daysIntoCurrentLevel = user && levelProgressions
+    ? (() => {
+        const currentLevelProgression = levelProgressions.find(p => p.level === user.level)
+        if (currentLevelProgression?.unlocked_at) {
+          const unlockedDate = new Date(currentLevelProgression.unlocked_at)
+          const now = new Date()
+          return Math.max(0, differenceInDays(now, unlockedDate))
+        }
+        return 0
+      })()
+    : 0
+
   // Use setting to determine which average to use
   const primaryDate = projection ? (useActiveAverage ? projection.expectedActive : projection.expected) : null
   const primaryPace = projection ? (useActiveAverage ? projection.activeDaysPerLevel : projection.averageDaysPerLevel) : 0
 
-  // Calculate conservative date based on selected pace
+  // Calculate conservative date based on selected pace, accounting for current level progress
   const conservativeDate = user && projection
-    ? addDays(new Date(), Math.round(primaryPace * 1.5 * (60 - user.level)))
+    ? addDays(new Date(), Math.max(0, Math.round(primaryPace * 1.5 * (60 - user.level)) - daysIntoCurrentLevel))
+    : null
+
+  // Calculate custom level date (always uses Expected pace)
+  const customLevelDate = user && projection && customLevel > user.level
+    ? addDays(new Date(), Math.max(0, Math.round((customLevel - user.level) * primaryPace) - daysIntoCurrentLevel))
+    : null
+
+  // Calculate next level prediction
+  const nextLevel = user && user.level < 60 ? user.level + 1 : null
+  const nextLevelDate = nextLevel && projection
+    ? addDays(new Date(), Math.max(0, Math.round(primaryPace) - daysIntoCurrentLevel))
     : null
 
   // Calculate pace based on selected scenario
@@ -65,6 +91,13 @@ export function Level60Projection() {
         const milestoneLevels = [1, 10, 20, 30, 40, 50, 60]
         const now = new Date()
 
+        // Find the most recent confirmed reset to determine actual start date
+        const mostRecentReset = resets && resets.length > 0
+          ? resets
+              .filter(reset => reset.confirmed_at !== null)
+              .sort((a, b) => new Date(b.confirmed_at!).getTime() - new Date(a.confirmed_at!).getTime())[0]
+          : null
+
         return milestoneLevels.map((level) => {
           const isCompleted = user.level > level // Changed from >= to > (current level isn't complete yet)
 
@@ -72,9 +105,13 @@ export function Level60Projection() {
           let date: Date
           if (isCompleted) {
             if (level === 1) {
-              // Level 1 start date - use unlocked_at
-              const level1Progression = levelProgressions.find(p => p.level === 1)
-              date = level1Progression?.unlocked_at ? new Date(level1Progression.unlocked_at) : now
+              // Level 1 start date - use most recent reset date if available, otherwise use unlocked_at
+              if (mostRecentReset?.confirmed_at) {
+                date = new Date(mostRecentReset.confirmed_at)
+              } else {
+                const level1Progression = levelProgressions.find(p => p.level === 1)
+                date = level1Progression?.unlocked_at ? new Date(level1Progression.unlocked_at) : now
+              }
             } else {
               // For other completed levels, use passed_at (when they leveled up FROM that level)
               const progression = levelProgressions.find(p => p.level === level)
@@ -87,9 +124,10 @@ export function Level60Projection() {
               }
             }
           } else {
-            // For upcoming levels, calculate projected date
+            // For upcoming levels, calculate projected date accounting for current level progress
             const levelsToGo = level - user.level
-            date = addDays(now, levelsToGo * selectedPace)
+            const daysToGo = (levelsToGo * selectedPace) - daysIntoCurrentLevel
+            date = addDays(now, Math.max(0, daysToGo))
           }
 
           return {
@@ -145,7 +183,7 @@ export function Level60Projection() {
             ? 'Based on active learning pace (excludes breaks)'
             : 'Based on all completed levels',
           date: primaryDate,
-          pace: `${Math.round(primaryPace)} days/level`,
+          pace: `${primaryPace} days/level`,
           color: 'text-ink-100 dark:text-paper-100',
         },
         {
@@ -155,6 +193,14 @@ export function Level60Projection() {
           date: conservativeDate,
           pace: `${Math.round(primaryPace * 1.5)} days/level`,
           color: 'text-ink-400 dark:text-paper-300',
+        },
+        {
+          icon: Target,
+          label: 'Custom Level',
+          description: 'Custom target level',
+          date: customLevelDate || primaryDate,
+          pace: `${Math.round(primaryPace)} days/level`,
+          color: 'text-ink-100 dark:text-paper-100',
         },
       ]
     : []
@@ -174,11 +220,11 @@ export function Level60Projection() {
           <div className="h-6 w-56 bg-paper-300 dark:bg-ink-300 rounded-full animate-pulse" />
         </div>
 
-        {/* Tabs - three pills */}
+        {/* Tabs - four pills */}
         <div className="mb-4">
           <div className="h-4 w-32 bg-paper-300 dark:bg-ink-300 rounded animate-pulse mb-4" />
           <div className="flex gap-2 bg-paper-300 dark:bg-ink-300 rounded-lg p-1 mb-6">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex-1 h-10 bg-paper-200 dark:bg-ink-200 rounded-md animate-pulse" />
             ))}
           </div>
@@ -285,6 +331,36 @@ export function Level60Projection() {
         </div>
       </div>
 
+      {/* Next Level Card - Only show if not at level 60 */}
+      {nextLevel && nextLevelDate && (
+        <div className="bg-gradient-to-r from-vermillion-500/10 to-transparent border-l-4 border-vermillion-500 rounded-lg p-4 mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Flag className="w-5 h-5 text-vermillion-500 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium text-ink-400 dark:text-paper-300">
+                  Next Level
+                </div>
+                <div className="text-2xl font-display font-bold text-ink-100 dark:text-paper-100">
+                  Level {nextLevel}
+                </div>
+              </div>
+            </div>
+            <div className="text-left sm:text-right">
+              <div className="text-sm text-ink-400 dark:text-paper-300 mb-1">
+                Predicted
+              </div>
+              <div className="text-lg font-semibold text-vermillion-500">
+                {format(nextLevelDate, 'MMM d, yyyy')}
+              </div>
+              <div className="text-xs text-ink-400 dark:text-paper-300">
+                {formatDistanceToNow(nextLevelDate, { addSuffix: true })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scenarios - Tabbed Interface */}
       <div className="mb-8">
         <h3 className="text-sm font-semibold text-ink-100 dark:text-paper-100 mb-4">
@@ -293,11 +369,12 @@ export function Level60Projection() {
 
         {/* Tab selector - segmented control style */}
         <div className="flex bg-paper-300 dark:bg-ink-300 rounded-lg p-1 mb-6">
-          {(['fast', 'expected', 'conservative'] as const).map((key) => {
+          {(['fast', 'expected', 'conservative', 'custom'] as const).map((key) => {
             const scenario = scenarios.find(s =>
               (key === 'fast' && s.label === 'Fast track') ||
               (key === 'expected' && s.label === 'Expected') ||
-              (key === 'conservative' && s.label === 'Conservative')
+              (key === 'conservative' && s.label === 'Conservative') ||
+              (key === 'custom' && s.label === 'Custom Level')
             )
             if (!scenario) return null
 
@@ -319,7 +396,7 @@ export function Level60Projection() {
                   'w-4 h-4',
                   isActive ? scenario.color : 'text-ink-400 dark:text-paper-300'
                 )} />
-                <span className="hidden sm:inline">{scenario.label}</span>
+                <span className="hidden sm:inline">{key === 'custom' ? 'Custom' : scenario.label}</span>
               </button>
             )
           })}
@@ -329,23 +406,73 @@ export function Level60Projection() {
         {scenarios.map((scenario) => {
           const scenarioKey =
             scenario.label === 'Fast track' ? 'fast' :
-            scenario.label === 'Expected' ? 'expected' : 'conservative'
+            scenario.label === 'Expected' ? 'expected' :
+            scenario.label === 'Conservative' ? 'conservative' : 'custom'
 
           if (selectedScenario !== scenarioKey) return null
 
           return (
             <div key={scenario.label} className="bg-paper-300/50 dark:bg-ink-300/50 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-lg font-semibold text-ink-100 dark:text-paper-100">
-                  {format(scenario.date, 'MMMM d, yyyy')}
-                </span>
-                <span className={cn('text-sm font-medium', scenario.color)}>
-                  {scenario.pace}
-                </span>
-              </div>
-              <p className="text-sm text-ink-400 dark:text-paper-300">
-                {scenario.description}
-              </p>
+              {scenarioKey === 'custom' ? (
+                <>
+                  {/* Custom level input */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-ink-100 dark:text-paper-100 mb-2">
+                      Target Level
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={customLevel}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 1
+                        setCustomLevel(Math.max(1, Math.min(60, val)))
+                      }}
+                      className="w-full px-4 py-3 bg-paper-100 dark:bg-ink-100 border border-paper-300 dark:border-ink-300 rounded-md text-ink-100 dark:text-paper-100 focus:outline-none focus:ring-2 focus:ring-vermillion-500"
+                    />
+                    <p className="text-xs text-ink-400 dark:text-paper-300 mt-2">
+                      Enter a level between 1 and 60 (Current: Level {user?.level})
+                    </p>
+                    {customLevel <= (user?.level || 0) && (
+                      <p className="text-xs text-vermillion-500 mt-1">
+                        Target level must be greater than your current level ({user?.level})
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Display prediction */}
+                  {customLevel > (user?.level || 0) && (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-lg font-semibold text-ink-100 dark:text-paper-100">
+                          {format(scenario.date, 'MMMM d, yyyy')}
+                        </span>
+                        <span className={cn('text-sm font-medium', scenario.color)}>
+                          {scenario.pace}
+                        </span>
+                      </div>
+                      <p className="text-sm text-ink-400 dark:text-paper-300">
+                        Prediction using Expected pace ({Math.round(primaryPace)} days/level)
+                      </p>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-semibold text-ink-100 dark:text-paper-100">
+                      {format(scenario.date, 'MMMM d, yyyy')}
+                    </span>
+                    <span className={cn('text-sm font-medium', scenario.color)}>
+                      {scenario.pace}
+                    </span>
+                  </div>
+                  <p className="text-sm text-ink-400 dark:text-paper-300">
+                    {scenario.description}
+                  </p>
+                </>
+              )}
             </div>
           )
         })}
@@ -396,7 +523,7 @@ export function Level60Projection() {
                         'text-xs mt-1 whitespace-nowrap',
                         isCompleted ? 'text-patina-500 dark:text-patina-400' : 'text-ink-400 dark:text-paper-300'
                       )}>
-                        {format(milestone.date, 'MMM yyyy')}
+                        {format(milestone.date, 'MMM d, yy')}
                       </div>
                     </div>
                   </div>
@@ -449,7 +576,7 @@ export function Level60Projection() {
                         'text-xs mt-1 whitespace-nowrap',
                         isCompleted ? 'text-patina-500 dark:text-patina-400' : 'text-ink-400 dark:text-paper-300'
                       )}>
-                        {format(milestone.date, 'MMM yyyy')}
+                        {format(milestone.date, 'MMM d, yy')}
                       </div>
                       {milestone.level === 60 && (
                         <div className="text-xs text-ink-400 dark:text-paper-300 mt-1 font-medium">
@@ -473,11 +600,21 @@ export function Level60Projection() {
             })}
           </div>
 
-          {/* Current position indicator (if between milestones) */}
-          {!allMilestones.some(m => m.level === user.level) && user.level > 1 && (
-            <div className="mt-4 text-xs text-ink-400 dark:text-paper-300 flex items-center gap-2">
-              <div className="w-2 h-2 bg-vermillion-500 rounded-full" />
-              <span>Currently at Level {user.level}</span>
+          {/* Current position indicator */}
+          {user && user.level < 60 && (
+            <div className="mt-4 flex items-center justify-center gap-3 text-xs">
+              <div className="flex items-center gap-2 text-ink-400 dark:text-paper-300">
+                <div className="w-2 h-2 bg-vermillion-500 rounded-full" />
+                <span>Level {user.level}</span>
+              </div>
+              {daysIntoCurrentLevel > 0 && (
+                <>
+                  <span className="text-ink-400/40 dark:text-paper-300/40">•</span>
+                  <span className="text-vermillion-500 font-medium">
+                    {daysIntoCurrentLevel} {daysIntoCurrentLevel === 1 ? 'day' : 'days'} in
+                  </span>
+                </>
+              )}
             </div>
           )}
         </div>

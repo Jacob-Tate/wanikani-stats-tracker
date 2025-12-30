@@ -158,6 +158,13 @@ export function projectLevel60Date(
     }
   }
 
+  // Calculate days into current level
+  const now = new Date()
+  const currentLevelProgression = levelProgressions.find(p => p.level === currentLevel)
+  const daysIntoCurrentLevel = currentLevelProgression?.unlocked_at
+    ? Math.max(0, differenceInDays(now, new Date(currentLevelProgression.unlocked_at)))
+    : 0
+
   // Calculate days per level for completed levels
   const levelDurations: Array<{ level: number; days: number }> = []
 
@@ -216,25 +223,25 @@ export function projectLevel60Date(
   const fastestLevel = sortedDurations[0]
   const slowestLevel = sortedDurations[sortedDurations.length - 1]
 
-  // Calculate projections
+  // Calculate projections accounting for current level progress
   const levelsRemaining = 60 - currentLevel
-  const now = new Date()
 
   // Use total average for "expected"
-  const expected = addDays(now, Math.round(averageDaysPerLevel * levelsRemaining))
+  const expectedDays = Math.round(averageDaysPerLevel * levelsRemaining) - daysIntoCurrentLevel
+  const expected = addDays(now, Math.max(0, expectedDays))
 
   // Use active average for "expectedActive"
-  const expectedActive = addDays(
-    now,
-    Math.round(activeResult.activeAverage * levelsRemaining)
-  )
+  const expectedActiveDays = Math.round(activeResult.activeAverage * levelsRemaining) - daysIntoCurrentLevel
+  const expectedActive = addDays(now, Math.max(0, expectedActiveDays))
 
   // Fast track: 8 days per level (WK speed run pace)
-  const fastTrack = addDays(now, 8 * levelsRemaining)
+  const fastTrackDays = (8 * levelsRemaining) - daysIntoCurrentLevel
+  const fastTrack = addDays(now, Math.max(0, fastTrackDays))
 
   // Conservative: Use active average * 1.5
   const conservativePace = Math.max(activeResult.activeAverage * 1.5, 18)
-  const conservative = addDays(now, Math.round(conservativePace * levelsRemaining))
+  const conservativeDays = Math.round(conservativePace * levelsRemaining) - daysIntoCurrentLevel
+  const conservative = addDays(now, Math.max(0, conservativeDays))
 
   return {
     expected,

@@ -10,6 +10,7 @@ const DEFAULT_METADATA: SyncMetadata = {
   assignmentsUpdatedAt: null,
   reviewStatisticsUpdatedAt: null,
   levelProgressionsUpdatedAt: null,
+  resetsUpdatedAt: null,
   lastFullSync: null,
 }
 

@@ -9,6 +9,7 @@ import type {
   LevelProgression,
   ReviewStatistic,
   Summary,
+  Reset,
 } from './types'
 
 // ============================================================================
@@ -230,4 +231,25 @@ export async function fetchReviewStatisticsFiltered(
  */
 export async function fetchSummary(token: string): Promise<Summary> {
   return fetchResource<Summary>('/summary', token)
+}
+
+// ============================================================================
+// Resets
+// ============================================================================
+
+/**
+ * Fetch all resets for the user
+ * https://docs.api.wanikani.com/20170710/#get-all-resets
+ */
+export async function fetchResets(
+  token: string,
+  updatedAfter?: string,
+  onProgress?: (current: number, total: number) => void
+): Promise<(Reset & { id: number })[]> {
+  const params = new URLSearchParams()
+  if (updatedAfter) {
+    params.append('updated_after', updatedAfter)
+  }
+  const endpoint = params.toString() ? `/resets?${params}` : '/resets'
+  return fetchAllPages<Reset>(endpoint, token, onProgress)
 }

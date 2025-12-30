@@ -7,6 +7,7 @@ import { getCachedSubjects } from '@/lib/db/repositories/subjects'
 import { getCachedAssignments } from '@/lib/db/repositories/assignments'
 import { getCachedReviewStatistics } from '@/lib/db/repositories/review-statistics'
 import { getCachedLevelProgressions } from '@/lib/db/repositories/level-progressions'
+import { getCachedResets } from '@/lib/db/repositories/resets'
 import { getLastSyncInfo } from '@/lib/sync/sync-manager'
 
 export const queryKeys = {
@@ -15,6 +16,7 @@ export const queryKeys = {
   subjects: ['subjects'] as const,
   levelProgressions: ['levelProgressions'] as const,
   reviewStatistics: ['reviewStatistics'] as const,
+  resets: ['resets'] as const,
   summary: ['summary'] as const,
   syncStatus: ['syncStatus'] as const,
 }
@@ -126,6 +128,25 @@ export function useLevelProgressions() {
   return useQuery({
     queryKey: queryKeys.levelProgressions,
     queryFn: getCachedLevelProgressions,
+    enabled: !!token && !isSyncing,
+    staleTime: 0, // Always check for fresh data
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnMount: 'always',
+    retry: 1,
+  })
+}
+
+/**
+ * Resets - loaded from IndexedDB cache
+ * Always checks for updates on mount to ensure fresh data
+ */
+export function useResets() {
+  const token = useUserStore((state) => state.token)
+  const isSyncing = useSyncStore((state) => state.isSyncing)
+
+  return useQuery({
+    queryKey: queryKeys.resets,
+    queryFn: getCachedResets,
     enabled: !!token && !isSyncing,
     staleTime: 0, // Always check for fresh data
     gcTime: 10 * 60 * 1000, // 10 minutes

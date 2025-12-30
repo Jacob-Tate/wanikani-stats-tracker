@@ -57,6 +57,12 @@ export async function getDatabase(): Promise<IDBDatabase> {
         progressionsStore.createIndex('level', 'level', { unique: false })
         progressionsStore.createIndex('updatedAt', 'updatedAt', { unique: false })
       }
+
+      // Resets store
+      if (!db.objectStoreNames.contains(STORES.RESETS)) {
+        const resetsStore = db.createObjectStore(STORES.RESETS, { keyPath: 'id' })
+        resetsStore.createIndex('updatedAt', 'updatedAt', { unique: false })
+      }
     }
   })
 

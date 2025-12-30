@@ -1,6 +1,6 @@
 import { differenceInDays } from 'date-fns'
 import { cn } from '@/lib/utils/cn'
-import { useUser, useLevelProgressions } from '@/lib/api/queries'
+import { useUser, useLevelProgressions, useResets } from '@/lib/api/queries'
 import { useSyncStore } from '@/stores/sync-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { calculateActiveAverage } from '@/lib/calculations/activity-analysis'
@@ -186,6 +186,7 @@ function CompactListView({ levelData }: { levelData: LevelData[] }) {
 export function LevelTimeline() {
   const { data: user, isLoading: userLoading } = useUser()
   const { data: levelProgressions, isLoading: progressionsLoading } = useLevelProgressions()
+  const { data: resets, isLoading: resetsLoading } = useResets()
   const isSyncing = useSyncStore((state) => state.isSyncing)
   const useActiveAverage = useSettingsStore((state) => state.useActiveAverage)
   const averagingMethod = useSettingsStore((state) => state.averagingMethod)
@@ -193,7 +194,7 @@ export function LevelTimeline() {
   const customThresholdDays = useSettingsStore((state) => state.customThresholdDays)
   const levelHistoryMode = useSettingsStore((state) => state.levelHistoryMode)
 
-  const isLoading = userLoading || progressionsLoading || isSyncing
+  const isLoading = userLoading || progressionsLoading || resetsLoading || isSyncing
 
   // Calculate level data from progressions
   const levelData: LevelData[] = []
@@ -203,10 +204,30 @@ export function LevelTimeline() {
   let slowestDays = 0
 
   if (levelProgressions && user) {
+    // Find the most recent confirmed reset to filter out old progressions
+    const mostRecentReset = resets && resets.length > 0
+      ? resets
+          .filter(reset => reset.confirmed_at !== null)
+          .sort((a, b) => new Date(b.confirmed_at!).getTime() - new Date(a.confirmed_at!).getTime())[0]
+      : null
+
+    const resetDate = mostRecentReset?.confirmed_at ? new Date(mostRecentReset.confirmed_at) : null
+
+    // Filter level progressions to only include those after the reset
+    const filteredProgressions = resetDate
+      ? levelProgressions.filter(progression => {
+          // Keep progressions created after the reset date
+          if (progression.created_at) {
+            return new Date(progression.created_at) > resetDate
+          }
+          return true
+        })
+      : levelProgressions
+
     // First pass: calculate days for completed levels
     const completedLevels: Array<{ level: number; days: number }> = []
 
-    for (const progression of levelProgressions) {
+    for (const progression of filteredProgressions) {
       if (progression.passed_at && progression.unlocked_at) {
         const unlockedDate = new Date(progression.unlocked_at)
         const passedDate = new Date(progression.passed_at)
@@ -221,7 +242,7 @@ export function LevelTimeline() {
     if (useActiveAverage && completedLevels.length > 0) {
       // Use active average with settings
       const activeResult = calculateActiveAverage(
-        levelProgressions,
+        filteredProgressions,
         {
           absoluteThreshold: customThresholdDays,
           useCustomThreshold: useCustomThreshold,
